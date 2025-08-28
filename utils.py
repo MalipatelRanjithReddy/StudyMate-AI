@@ -119,6 +119,13 @@ def get_rag_response(query, faiss_index, encoder, text_chunks):
         
         # UPDATED: Changed how the generated text is accessed from the response dictionary
         generated_text = response['results'][0]['generated_text']
+        # --- NEW: Safeguard to prevent incomplete sentences ---
+        if len(generated_text) > 0 and generated_text[-1] not in ['.', '?', '!', '"', ')']:
+            # Find the last full sentence
+            last_sentence_end = max(generated_text.rfind('.'), generated_text.rfind('?'), generated_text.rfind('!'))
+            if last_sentence_end != -1:
+                # Truncate to the last complete sentence
+                generated_text = generated_text[:last_sentence_end + 1]
         return generated_text, retrieved_chunks
 
     except Exception as e:
