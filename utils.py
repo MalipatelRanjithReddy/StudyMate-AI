@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import faiss
-from ibm_watsonx_ai.foundation_models import Model
+from ibm_watsonx_ai.foundation_models import ModelInference
 
 # Load environment variables from .env file
 load_dotenv()
@@ -60,22 +60,26 @@ def create_vector_store(text_chunks):
     return index, encoder
 
 # --- 3. LLM Integration and Answer Generation ---
+# In utils.py, replace the entire get_rag_response function with this:
+
 def get_rag_response(query, faiss_index, encoder, text_chunks):
     """
     Retrieves relevant context and generates an answer using the IBM Watsonx LLM.
     """
-    # Embed the user's query [cite: 191]
+    # Embed the user's query
     query_vector = encoder.encode([query])
     
-    # Search the FAISS index for the top k similar chunks [cite: 79, 189]
+    # Search the FAISS index for the top k similar chunks
     k = 3
     distances, indices = faiss_index.search(np.array(query_vector), k)
     
-    # Retrieve the relevant chunks [cite: 192]
-    retrieved_chunks = [text_chunks[i] for i in indices[0]]
+    # Retrieve the relevant chunks
+    # De-duplicate the retrieved chunks while preserving order
+    unique_indices = list(dict.fromkeys(indices[0]))
+    retrieved_chunks = [text_chunks[i] for i in unique_indices]
     context = "\n\n".join(retrieved_chunks)
     
-    # --- Prompt Construction [cite: 214] ---
+    # --- Prompt Construction ---
     prompt_template = f"""
     Answer the question based strictly on the following context. If the answer is not in the context, say "I cannot answer this based on the provided documents."
 
@@ -88,9 +92,10 @@ def get_rag_response(query, faiss_index, encoder, text_chunks):
     Answer:
     """
 
-    # --- IBM Watsonx LLM Invocation [cite: 210, 222] ---
+    # --- IBM Watsonx LLM Invocation ---
     try:
-        model_id = "mistralai/mixtral-8x7b-instruct-v01" # [cite: 86, 222]
+        # UPDATED: Changed to the non-deprecated model
+        model_id = "ibm/granite-3-3-8b-instruct" 
         
         credentials = {
             "url": os.getenv("IBM_URL"),
@@ -98,12 +103,12 @@ def get_rag_response(query, faiss_index, encoder, text_chunks):
         }
         
         params = {
-            "decoding_method": "greedy", # [cite: 225]
-            "max_new_tokens": 300, # [cite: 224]
-            "temperature": 0.5, # [cite: 226]
+            "decoding_method": "greedy",
+            "max_new_tokens": 300,
+            "temperature": 0.5,
         }
         
-        model = Model(
+        model = ModelInference(
             model_id=model_id,
             params=params,
             credentials=credentials,
@@ -111,7 +116,10 @@ def get_rag_response(query, faiss_index, encoder, text_chunks):
         )
         
         response = model.generate(prompt=prompt_template)
-        return response.generated_text, retrieved_chunks
+        
+        # UPDATED: Changed how the generated text is accessed from the response dictionary
+        generated_text = response['results'][0]['generated_text']
+        return generated_text, retrieved_chunks
 
     except Exception as e:
         print(f"Error during LLM call: {e}")
