@@ -78,7 +78,7 @@ async def answer_question(agent, question):
         return f"Error: {e}", []
 
 st.set_page_config(page_title="StudyMate", layout="wide")
-st.title("📚 StudyMate Enhanced")
+st.title("📚 StudyMate")
 
 SUPPORTED_MODELS = [
     'mistralai/mistral-large',
