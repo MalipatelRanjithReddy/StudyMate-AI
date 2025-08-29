@@ -1,0 +1,14 @@
+streamlit
+nest-asyncio
+markitdown[all]
+sentence-transformers
+faiss-cpu
+ibm-watsonx-ai
+openai
+python-dotenv
+PyMuPDF
+numpy
+langgraph
+langchain-core
+pydantic
+langchain_ibm
