@@ -82,8 +82,6 @@ st.title("📚 StudyMate")
 
 SUPPORTED_MODELS = [
     'mistralai/mistral-large',
-    'meta-llama/llama-3-3-70b-instruct',
-    'meta-llama/llama-4-maverick-17b-128e-instruct-fp8',
 ]
 
 if "history" not in st.session_state:
